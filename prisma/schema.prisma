@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                      String   @id
+  firstSeenAt             DateTime @default(now())
+  lastActivityAt          DateTime @updatedAt
+
+  // Aggregated metrics (cached for performance)
+  totalDonatedNear        Decimal  @default(0) @db.Decimal(30, 6)
+  totalDonatedUsd         Decimal  @default(0) @db.Decimal(20, 2)
+  totalReceivedNear       Decimal  @default(0) @db.Decimal(30, 6)
+  totalReceivedUsd        Decimal  @default(0) @db.Decimal(20, 2)
+  donationsSentCount      Int      @default(0)
+  donationsReceivedCount  Int      @default(0)
+  referralFeesEarnedNear  Decimal  @default(0) @db.Decimal(30, 6)
+  referralFeesEarnedUsd   Decimal  @default(0) @db.Decimal(20, 2)
+  referralFeesPaidNear    Decimal  @default(0) @db.Decimal(30, 6)
+  referralFeesPaidUsd     Decimal  @default(0) @db.Decimal(20, 2)
+
+  // Breakdown by type
+  directDonatedUsd        Decimal  @default(0) @db.Decimal(20, 2)
+  directReceivedUsd       Decimal  @default(0) @db.Decimal(20, 2)
+  directSentCount         Int      @default(0)
+  directReceivedCount     Int      @default(0)
+
+  potDonatedUsd           Decimal  @default(0) @db.Decimal(20, 2)
+  potReceivedUsd          Decimal  @default(0) @db.Decimal(20, 2)
+  potSentCount            Int      @default(0)
+  potReceivedCount        Int      @default(0)
+
+  campaignDonatedUsd      Decimal  @default(0) @db.Decimal(20, 2)
+  campaignReceivedUsd     Decimal  @default(0) @db.Decimal(20, 2)
+  campaignSentCount       Int      @default(0)
+  campaignReceivedCount   Int      @default(0)
+
+  // Temporal data
+  firstDonationDate       DateTime?
+  lastDonationDate        DateTime?
+
+  donationsSent           Donation[] @relation("DonorDonations")
+  donationsReceived       Donation[] @relation("RecipientDonations")
+  referredDonations       Donation[] @relation("ReferrerDonations")
+
+  @@index([totalDonatedUsd(sort: Desc)])
+  @@index([totalReceivedUsd(sort: Desc)])
+  @@index([referralFeesEarnedUsd(sort: Desc)])
+}
+
+model Donation {
+  id                String       @id @default(cuid())
+
+  type              DonationType
+
+  donorId           String
+  donor             Account      @relation("DonorDonations", fields: [donorId], references: [id], onDelete: Cascade)
+
+  recipientId       String?
+  recipient         Account?     @relation("RecipientDonations", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  amountNear        Decimal      @db.Decimal(30, 6)
+  amountUsd         Decimal      @db.Decimal(20, 2)
+  ftId              String       @default("near")
+
+  message           String?      @db.Text
+  donatedAt         DateTime
+  blockHeight       BigInt
+  transactionHash   String       @unique
+
+  protocolFeeNear   Decimal      @default(0) @db.Decimal(30, 6)
+  protocolFeeUsd    Decimal      @default(0) @db.Decimal(20, 2)
+
+  referrerId        String?
+  referrer          Account?     @relation("ReferrerDonations", fields: [referrerId], references: [id], onDelete: SetNull)
+  referrerFeeNear   Decimal      @default(0) @db.Decimal(30, 6)
+  referrerFeeUsd    Decimal      @default(0) @db.Decimal(20, 2)
+
+  // Type-specific fields
+  potId             String?
+  pot               Pot?         @relation(fields: [potId], references: [id], onDelete: Cascade)
+
+  campaignId        String?
+  campaign          Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Pot donation specific fields
+  netAmount         Decimal?     @db.Decimal(30, 6)
+  chefId            String?
+  chefFee           Decimal?     @db.Decimal(30, 6)
+  projectId         String?
+
+  createdAt         DateTime     @default(now())
+
+  @@index([donorId, donatedAt(sort: Desc)])
+  @@index([recipientId, donatedAt(sort: Desc)])
+  @@index([type, donatedAt(sort: Desc)])
+  @@index([blockHeight])
+  @@index([donatedAt(sort: Desc)])
+  @@index([amountUsd(sort: Desc)])
+}
+
+model Pot {
+  id          String        @id
+  name        String?
+  description String?       @db.Text
+  status      PotStatus     @default(ACTIVE)
+
+  donations   Donation[]
+  payouts     PotPayout[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model PotPayout {
+  id              String   @id @default(cuid())
+  potId           String
+  pot             Pot      @relation(fields: [potId], references: [id], onDelete: Cascade)
+
+  recipientId     String
+  amountNear      Decimal  @db.Decimal(30, 6)
+  amountUsd       Decimal  @db.Decimal(20, 2)
+  ftId            String   @default("near")
+
+  paidAt          DateTime
+  blockHeight     BigInt
+  transactionHash String   @unique
+
+  createdAt       DateTime @default(now())
+
+  @@index([potId])
+  @@index([recipientId])
+  @@index([paidAt(sort: Desc)])
+}
+
+model Campaign {
+  id          String          @id
+  name        String?
+  description String?         @db.Text
+  status      CampaignStatus  @default(ACTIVE)
+
+  donations   Donation[]
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([status])
+}
+
+model TokenPrice {
+  id        String   @id @default(cuid())
+  tokenId   String
+  priceUsd  Decimal  @db.Decimal(20, 8)
+  timestamp DateTime
+  source    String   @default("coingecko")
+
+  createdAt DateTime @default(now())
+
+  @@unique([tokenId, timestamp])
+  @@index([tokenId, timestamp(sort: Desc)])
+}
+
+model IndexerCheckpoint {
+  id              String   @id @default("singleton")
+  lastBlockHeight BigInt
+  lastBlockHash   String
+  lastBlockTime   DateTime
+  updatedAt       DateTime @updatedAt
+}
+
+enum DonationType {
+  DIRECT
+  POT
+  POT_PROJECT
+  CAMPAIGN
+}
+
+enum PotStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
