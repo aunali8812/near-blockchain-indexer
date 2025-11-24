@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Documentation
+*.md
+README.md
+ARCHITECTURE.md
+API.md
+DEPLOYMENT.md
+AWS-README.md
+
+# Development files
+.env
+.env.local
+.env.development
+*.log
+deployment.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.ts
+*.spec.ts
+test/
+tests/
+coverage/
+
+# AWS deployment files (not needed in container)
+aws-infrastructure.yml
+aws-ecs-task-definition.json
+deploy.sh
+task-definition.json
+
+# Build output (will be generated in container)
+dist/
+node_modules/
+
+# Scripts
+scripts/
+check-data.js
+check-db.js
+reset-checkpoint.js
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Claude
+.claude/
