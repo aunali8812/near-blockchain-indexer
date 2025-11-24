@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws cloudformation delete-stack:*)",
+      "Bash(DB_PASSWORD=\"aunali881\" COINGECKO_API_KEY=\"aunali881\" bash:*)",
+      "Bash(aws cloudformation wait:*)",
+      "Bash(tee:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

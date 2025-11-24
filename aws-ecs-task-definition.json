@@ -1,0 +1,104 @@
+{
+  "family": "potlock-indexer",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "potlock-indexer",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/potlock-indexer:latest",
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "3000"
+        },
+        {
+          "name": "NEAR_NETWORK",
+          "value": "mainnet"
+        },
+        {
+          "name": "NEAR_RPC_URL",
+          "value": "https://rpc.fastnear.com"
+        },
+        {
+          "name": "DIRECT_DONATIONS_CONTRACT",
+          "value": "donate.potlock.near"
+        },
+        {
+          "name": "POT_FACTORY_CONTRACT",
+          "value": "potfactory.potlock.near"
+        },
+        {
+          "name": "LIST_REGISTRY_CONTRACT",
+          "value": "lists.potlock.near"
+        },
+        {
+          "name": "START_BLOCK_HEIGHT",
+          "value": "176000000"
+        },
+        {
+          "name": "INDEXER_POLL_INTERVAL_MS",
+          "value": "5000"
+        },
+        {
+          "name": "PRICE_UPDATE_INTERVAL_MS",
+          "value": "300000"
+        },
+        {
+          "name": "RATE_LIMIT_TTL",
+          "value": "60"
+        },
+        {
+          "name": "RATE_LIMIT_MAX",
+          "value": "500"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:potlock/database-url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:potlock/redis-host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:potlock/redis-port"
+        },
+        {
+          "name": "COINGECKO_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_ACCOUNT_ID:secret:potlock/coingecko-key"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/potlock-indexer",
+          "awslogs-region": "YOUR_REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/stats || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
